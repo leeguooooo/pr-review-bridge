@@ -8,7 +8,7 @@ A review that starts immediately but finishes after the PR merges cannot inform 
 
 1. **Intent:** the author declares none, spark or deep, with a reason.
 2. **Scheduling:** coalesce events, wait 60 seconds for a stable head, and cancel obsolete work.
-3. **Reasoning:** give a bounded diff and request only missing snippets. Missing context is not automatically complex reasoning.
+3. **Reasoning:** give a bounded diff and request only missing snippets. The author chooses the review level; the service does not classify complexity or upgrade models.
 4. **Reuse:** key source analysis by repository, head, merge-base and engine policy; key human acknowledgement separately by the current PR revision and declaration.
 5. **Delivery:** publish high-confidence defects, edit one status comment, privately notify the author, and optionally wake the exact development session.
 
