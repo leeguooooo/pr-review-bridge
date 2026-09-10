@@ -142,12 +142,14 @@ class Gogs:
         if self.credentials_file:
             refs=git(None,'ls-remote',self.origin+'/'+REPO+'.git','refs/pull/*/head')
             numbers=sorted({int(m[1]) for m in re.finditer(r'refs/pull/(\d+)/head',refs)})
-            result=[]
-            for n in numbers:
-                r=self.session.get(f'{self.origin}/api/v1/repos/{REPO}/issues/{n}',timeout=30);r.raise_for_status()
-                issue=r.json()
-                if issue.get('pull_request') and issue['state']=='open':result.append(n)
-            return result
+            from concurrent.futures import ThreadPoolExecutor
+            def check(n):
+                r=requests.get(f'{self.origin}/api/v1/repos/{REPO}/issues/{n}',headers=dict(self.session.headers),timeout=15)
+                if r.status_code==404:return None
+                r.raise_for_status();issue=r.json()
+                return n if issue.get('pull_request') and issue['state']=='open' else None
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                return [n for n in pool.map(check,numbers) if n is not None]
         # Pagination avoids silently missing PRs beyond the first page.
         found=set()
         for page in range(1,101):
@@ -366,6 +368,8 @@ class Worker:
         job=self.store.job(n,head,base,d)
         self.store.set_meta('declaration:'+job['key'],d)
         review_cfg=effective_config(self.cfg,d)
+        if p.get('head')==self.cfg.get('chatgpt_use_canary_branch') and self.cfg.get('chatgpt_use_canary_branch'):
+            review_cfg['backend']='chatgpt-use'
         if not d['valid'] or d['level']=='none':
             status='invalid' if not d['valid'] else 'skipped'
             self.store.update(job['key'],status=status,result=json.dumps({'reason':d['reason']}),notified=1)
@@ -406,9 +410,11 @@ class Worker:
                 {'PATH','HOME','USER','LOGNAME','TMPDIR','LANG','CODEX_HOME','CODEX_REVIEW_MODEL'}}
             if self.cfg.get('codex_bin'):engine_env['CODEX_REVIEW_BIN']=self.cfg['codex_bin']
             engine_env['CODEX_REVIEW_BACKEND']=review_cfg.get('backend','codex')
+            self.active_backend=engine_env['CODEX_REVIEW_BACKEND']
             if engine_env['CODEX_REVIEW_BACKEND']=='chatgpt-use':
                 web=review_cfg.get('chatgpt_use',{})
                 engine_env['CHATGPT_REVIEW_BIN']=web['bin']
+                if web.get('browser_bin_dir'):engine_env['PATH']=web['browser_bin_dir']+os.pathsep+engine_env.get('PATH','')
                 engine_env['CHATGPT_REVIEW_MODEL']=web['models'][d['level']]
                 engine_env['CHATGPT_REVIEW_PROFILE']=web.get('profile','auto')
                 engine_env['CHATGPT_REVIEW_SESSION']=web.get('session','chatgpt-web')
@@ -504,7 +510,7 @@ class Worker:
     def kill_child(self):
         if self.child and self.child.poll() is None:
             try:
-                if self.cfg.get('backend')=='chatgpt-use':
+                if getattr(self,'active_backend',self.cfg.get('backend'))=='chatgpt-use':
                     os.killpg(self.child.pid,signal.SIGTERM)
                     try:self.child.communicate(timeout=30)
                     except subprocess.TimeoutExpired:pass
