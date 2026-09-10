@@ -29,3 +29,11 @@ Example envelope (adapter-owned, not an implemented endpoint):
 ```
 
 Cross-session delivery supplements the existing Lark author DM. It must not cause another review or automatic model escalation.
+
+## Optional no-review auto-merge dispatcher
+
+`auto_merge` is disabled by default. Configure `enabled`, `identity: "robot"`, an explicit `authors` allowlist and a trusted `command` argument array. The command receives JSON on stdin: repo, pr, head, base, reason, request_id and identity. It must use only robot credentials, verify conflicts and repository rules, and atomically require the expected source/target refs at the host merge boundary. Never point it at a script from the untrusted PR checkout.
+
+Only a valid explicit `none` is eligible. Existing findings or any nonempty human comment conservatively route to manual handling. Outages and clean AI reviews do not automatically trigger this dispatcher. A request intent is persisted before execution; uncertain outcomes are not blindly retried. A successful JSON receipt must include `status: "merged"`, `head`, and `base`, and the service re-reads host merged state.
+
+No host-specific merge adapter is bundled yet. The production robot currently needs additional permissions before this can be enabled. This is a dispatch interface, not a claim that Gogs exposes compare-and-swap merge semantics.
