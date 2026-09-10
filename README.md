@@ -33,7 +33,7 @@ See [integration and deployment](pr_review/README.md), [cross-session integratio
 
 ## Boundaries
 
-This is an experimental integration. A healthy HTTP endpoint is not proof a model review succeeded. Browser-backed `chatgpt-use` is planned, **not implemented**. Model quotas remain those of the selected provider.
+This is an experimental integration. A healthy HTTP endpoint is not proof a model review succeeded. A browser-backed `chatgpt-use` adapter is implemented and offline-tested; production activation and live end-to-end verification remain deployment-specific. Model quotas remain those of the selected provider.
 
 Gogs is the currently implemented Git host. The checker is **not** a native server-enforced merge lock. Automated merging requires a separate explicitly configured merge identity and host integration; it is not enabled by this public release. A skipped review is not an AI approval.
 

@@ -26,6 +26,6 @@ Use unit tests for queue migration, cancellation, declaration parsing, identity 
 
 ## Next: chatgpt-use
 
-The intended adapter is a read-only `ask` transport, not an autonomous code-editing loop. Requirements are strict structured output, durable submission receipts, resumable reads and confirmed cancellation. See upstream [structured output issue](https://github.com/leeguooooo/chatgpt-use/issues/3) and [request lifecycle issue](https://github.com/leeguooooo/chatgpt-use/issues/4). This adapter is not yet shipped here.
+The intended adapter is a read-only `ask` transport, not an autonomous code-editing loop. Requirements are strict structured output, durable submission receipts, resumable reads and confirmed cancellation. See upstream [structured output issue](https://github.com/leeguooooo/chatgpt-use/issues/3) and [request lifecycle issue](https://github.com/leeguooooo/chatgpt-use/issues/4). The optional adapter is now shipped with offline tests; live integration verification is not claimed.
 
 Suggested talk/demo: declaration → coalesced queue → cache hit with zero model calls → bounded review → author notification → exact-session wakeup → human decision. Demonstrate an unavailable provider too; do not present only the happy path.
