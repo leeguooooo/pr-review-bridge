@@ -12,6 +12,8 @@ Authors declare `none`, `spark`, or `deep` in the PR body. The service verifies 
 
 ## What works
 
+The web reviewer can now choose local read-only tools itself: file reads, literal code search, file listing, Git diff/show/blame. The controller runs them on the pinned checkout, returns bounded results, and records tools used. It does not expose arbitrary shell execution or project writes.
+
 - Codex SDK backend: author-selected Spark low or GPT-6 low, with bounded context requests and no automatic complexity routing.
 - Exact-source result and stage caches, 60-second settling, bounded execution, stale-result rejection.
 - Gogs API robot identity, signed webhooks, durable SQLite queues and editable machine-readable status.
