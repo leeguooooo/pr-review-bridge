@@ -383,7 +383,14 @@ class Worker:
         if job['status']=='stale':
             self.store.update(job['key'],status='pending',notified=0,comment_url=None)
             job['status']='pending'
+        if job['status']=='failed' and json.loads(job.get('result') or '{}').get('error')=='channel_paused' and not self.cfg.get('reviews_paused'):
+            self.store.update(job['key'],status='pending',result=None,notified=0)
+            job['status']='pending'
         if job['status'] not in ['pending','running']:return
+        if self.cfg.get('reviews_paused'):
+            self.store.update(job['key'],status='failed',result=json.dumps({'error':'channel_paused','reason_code':'channel_paused','reason':'评审渠道已由维护者暂停'},ensure_ascii=False),notified=1)
+            self.store.enqueue_status(n)
+            return
         state,remaining=stable_remaining(self.store.meta('stable:'+str(n)),head,time.time(),self.cfg.get('settle_seconds',60))
         self.store.set_meta('stable:'+str(n),state)
         if remaining>0:
@@ -598,12 +605,15 @@ class Worker:
         key=job_key(REPO,number,head,base,d)
         with self.store.db() as c:r=c.execute('SELECT * FROM jobs WHERE key=?',(key,)).fetchone()
         comments=self.notify_gogs.comments(number)
+        r=dict(r) if r else None
         if r and r['status'] in ('failed','skipped'):
             # Switching to none/unavailable does not erase the last known defects.
             with self.store.db() as c:prior=c.execute("SELECT * FROM jobs WHERE pr=? AND status='ready' AND comment_url IS NOT NULL ORDER BY rowid DESC LIMIT 1",(number,)).fetchone()
             if prior and json.loads(prior['result']).get('issues'):
-                old=evaluate_gate(dict(prior),comments,p['author'],self.cfg.get('reviewers',[]),self.notify_gogs.username)
-                if not old['allowed']:return {'allowed':False,'reason':'已有评审缺陷尚未完成处理与双人确认'}
+                if r['status']=='failed':r['known_issues']=json.loads(prior['result'])['issues']
+                else:
+                    old=evaluate_gate(dict(prior),comments,p['author'],self.cfg.get('reviewers',[]),self.notify_gogs.username)
+                    if not old['allowed']:return {'allowed':False,'reason':'已有评审缺陷尚未完成处理与双人确认'}
         return evaluate_gate(dict(r) if r else None,comments,p['author'],self.cfg.get('reviewers',[]),self.notify_gogs.username)
 
     def sync_status(self,number):
